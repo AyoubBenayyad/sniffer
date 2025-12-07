@@ -1,135 +1,50 @@
-# TP 3: Intrusion Detection System (NIDS)
+# TP 3 : NIDS (Détection d'Intrusions)
 
-This project implements a simple NIDS in C using the `libpcap` library to detect suspicious HTTP 404 error patterns.
+Projet réalisé par Ayoub Benayyad.
 
----
+## Compilation
 
-## 🐧 Execution on Linux (Native - No Docker)
+Le projet peut se compiler sous Linux. Si vous êtes sous Windows, vous pouvez utiliser Docker.
 
-### Prerequisites
-- **GCC Compiler**
-- **Libpcap Development Headers**
+**Commande pour compiler :**
 
-### Installation
+```bash
+# Pour la partie analyse (Ex 1-9)
+gcc -o analysis analysis.c
 
-1. **Install dependencies**:
-   ```bash
-   sudo apt-get install build-essential libpcap-dev
-   ```
+# Pour le sniffer (Ex 10-18)
+gcc -o sniffer sniffer.c -lpcap
+```
 
-2. **Compile the programs**:
-   ```bash
-   gcc -o analysis analysis.c
-   gcc -o sniffer sniffer.c -lpcap
-   ```
+## Exécution
 
-### Testing
-
-#### Test 1: Analysis Logic (Standalone)
-Run the analysis test program to verify the string parsing and alarm logic:
+### 1. Tester la partie Analyse
+Ce programme teste juste la logique (détection de chaines de caractères).
 ```bash
 ./analysis
 ```
 
-**Expected Output**: You should see test cases demonstrating HTTP parsing and 404 detection logic.
-
-#### Test 2: Network Sniffer (Requires root privileges)
-Run the sniffer to capture real network traffic:
+### 2. Lancer le Sniffer
+Il faut les droits root pour capturer les paquets.
 ```bash
 sudo ./sniffer
 ```
+*(Si ça ne marche pas, essayez `sudo ./sniffer eth0` ou votre interface réseau)*
 
-*Note: If no device is found automatically, specify your network interface:*
+### Tests effectués
+
+Pour tester l'alarme, j'utilise `curl` ou un navigateur pour générer deux erreurs 404 :
 ```bash
-sudo ./sniffer eth0
+curl http://www.google.com/faux_lien_1
+curl http://www.google.com/faux_lien_2
 ```
-(Replace `eth0` with your actual interface: `wlan0`, `enp0s3`, etc. Use `ip a` to list interfaces)
-
-### Generating Test Traffic
-
-Once the sniffer is running, **in another terminal**, generate HTTP traffic:
-
-#### Option A: Using curl (Recommended)
-```bash
-# Normal request
-curl http://example.com
-
-# Trigger 404 errors (run twice to trigger alarm)
-curl http://example.com/fakepage1
-curl http://example.com/fakepage2
-```
-
-#### Option B: Using a Web Browser
-**Important**: Modern browsers use HTTPS by default, which is encrypted and cannot be analyzed by the sniffer.
-
-**You MUST use HTTP-only URLs**:
-- `http://example.com` ✅
-- `http://neverssl.com` ✅
-- ~~`https://google.com`~~ ❌ (encrypted, won't work)
-
-To trigger the alarm:
-1. Visit `http://example.com/nonexistent1` (you'll see `[!] 404 Error Detected`)
-2. Visit `http://example.com/nonexistent2` (you'll see `ALARM: Suspicious behavior detected`)
-
-**Expected Output**: The sniffer will display captured packets and trigger an alarm after detecting two 404 errors.
+Cela déclenche le message `!!! ALARME !!!`.
 
 ---
 
-## 🪟 Execution on Windows (Using Docker)
+## Pour Windows (Docker)
 
-### Prerequisites
-- **Docker Desktop**: Ensure Docker is installed and running
-
-### Setup and Execution
-
-1. **Build the Docker Image**:
-   Open a terminal (PowerShell or CMD) in the project folder and run:
-   ```bash
-   docker build -t nids-project .
-   ```
-
-2. **Run the Container**:
-   ```bash
-   docker run -it --name nids nids-project
-   ```
-   
-   *Note: You'll be inside the container as `root`, so `sudo` is not needed.*
-
-3. **Inside the Container**:
-   
-   The executables `analysis` and `sniffer` are already compiled in `/app`.
-
-   **Test Analysis**:
-   ```bash
-   ./analysis
-   ```
-
-   **Test Sniffer**:
-   
-   Start the sniffer in the background:
-   ```bash
-   ./sniffer &
-   ```
-   
-   *(Alternative: Open a second terminal with `docker exec -it nids /bin/bash` and run `./sniffer`)*
-
-4. **Generate Test Traffic** (inside the container):
-   ```bash
-   # Normal traffic
-   curl http://example.com
-   
-   # Trigger 404 errors (alarm)
-   curl http://example.com/fakepage1
-   curl http://example.com/fakepage2
-   ```
-
-**Expected Output**: You should see packet captures and the alarm message after two 404 errors.
-
----
-
-## 📝 Notes for Professors
-
-- **Linux users**: The native approach is faster and more straightforward
-- **Windows users**: Docker provides a consistent Linux environment without WSL complications
-- **HTTPS Limitation**: The sniffer only works with unencrypted HTTP traffic (port 80). Modern HTTPS traffic cannot be analyzed without SSL/TLS decryption
-- **Network Interface**: On Linux, the program auto-detects the interface, but you can specify it manually if needed
+Comme je suis sous Windows, j'ai utilisé Docker pour que ce soit plus simple.
+1. Construire : `docker build -t nids .`
+2. Lancer : `docker run -it --name tp-nids nids`
+3. Dans le conteneur, lancer `./sniffer &` puis faire des `curl`.

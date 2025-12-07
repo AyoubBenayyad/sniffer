@@ -2,31 +2,24 @@
 #include <string.h>
 #include <unistd.h>
 
-/**
- * Global variable for Exercise 8
- * Counts the number of consecutive 404 errors.
- */
-int error404_count = 0;
+// Variable globale pour compter les erreurs 404 (Exercice 8)
+int compte_erreurs = 0;
 
-/**
- * Exercise 4: Function that takes a char buffer and prints everything after "HTTP"
- * if it exists.
- */
+// Exercice 4 : Affiche ce qu'il y a apres "HTTP"
 void print_after_http(char *buffer) {
-    char *ret = strstr(buffer, "HTTP");
-    if (ret != NULL) {
-        printf("Content after 'HTTP': %s\n", ret + 4);
+    char *ptr = strstr(buffer, "HTTP");
+    if (ptr != NULL) {
+        printf("Reste du buffer : %s\n", ptr + 4);
     } else {
-        printf("No 'HTTP' found in the buffer.\n");
+        printf("Pas de 'HTTP' trouvé.\n");
     }
 }
 
-/**
- * Exercise 5: Checks if the buffer contains "HTTP" AND "404".
- * Returns 1 if true, 0 otherwise.
- */
+// Exercice 5 : Detecte si on a une erreur 404
 int detectHttp404(char *buffer) {
+    // On cherche "HTTP"
     if (strstr(buffer, "HTTP") != NULL) {
+        // Et on cherche "404"
         if (strstr(buffer, "404") != NULL) {
             return 1;
         }
@@ -34,63 +27,48 @@ int detectHttp404(char *buffer) {
     return 0;
 }
 
-/**
- * Exercise 6 & 8 & 9: Recv function simulation
- * Checks for 404 errors and manages the alarm.
- */
+// Exercice 6, 8, 9 : Fonction de reception simulee
 void recv(char *buffer) {
-    int retour;
-    retour = detectHttp404(buffer);
+    int resultat;
+    resultat = detectHttp404(buffer);
 
-    if (retour == 1) {
-        printf("[!] 404 Error Detected!\n");
-        error404_count++;
-    } else {
-        // Optionnel : remettre à zéro si on reçoit une requête valide ?
-        // Le sujet ne le précise pas explicitement, mais pour "2 erreurs consécutives" ou "série",
-        // on pourrait le remettre à 0. Ici on suit la consigne "Atteint 2".
-        // Si on interprète strictement "compter le nombre de fois", on incrémente.
-        // Si c'est une détection de "comportement suspect", on peut imaginer un reset.
-        // Pour ce TP simple, on incrémente juste.
+    if (resultat == 1) {
+        printf("-> Erreur 404 détectée !\n");
+        compte_erreurs++;
     }
 
-    // Exercise 9: Alarm trigger
-    if (error404_count >= 2) {
-        printf("ALARM: Suspicious behavior detected (Two 404 errors)!\n");
-        error404_count = 0; // Reset counter
+    // Declenchement de l'alarme au bout de 2 erreurs
+    if (compte_erreurs >= 2) {
+        printf("ALARME : Trop d'erreurs 404 détectées (Comportement suspect) !\n");
+        compte_erreurs = 0; // Remise a zero
     }
 }
 
 int main() {
-    printf("--- Test Analysis Logic ---\n");
+    printf("--- Test du programme ---\n");
 
-    // Sample HTTP Response (valid 200 OK)
-    char valid_response[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html>...</html>";
+    // Reponse OK
+    char reponse_ok[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html>Test</html>";
     
-    // Sample HTTP Response (404 Error)
-    char error_response[] = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\nError...";
+    // Reponse 404
+    char reponse_erreur[] = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\nErreur...";
     
-    // Sample non-HTTP data
-    char junk_data[] = "Some random data without the keyword.";
+    printf("\nTest appel Exercice 4 :\n");
+    print_after_http(reponse_ok);
 
-    printf("\n[Test Ex 4] Print after HTTP:\n");
-    print_after_http(valid_response);
-    print_after_http(junk_data);
-
-    printf("\n[Test Ex 7] Simulate Reception:\n");
+    printf("\nTest simulation reception (Ex 7, 8, 9) :\n");
     
-    printf("1. Receiving valid response...\n");
-    recv(valid_response);
+    printf("Reception normale...\n");
+    recv(reponse_ok);
     
-    printf("2. Receiving 1st 404 error...\n");
-    recv(error_response);
+    printf("Reception 404 (1ere)...\n");
+    recv(reponse_erreur);
     
-    printf("3. Receiving valid response...\n");
-    recv(valid_response);
+    printf("Reception normale...\n");
+    recv(reponse_ok);
     
-    printf("4. Receiving 2nd 404 error...\n");
-    recv(error_response); 
-    // Should trigger alarm here
+    printf("Reception 404 (2eme) -> Alarme attendue...\n");
+    recv(reponse_erreur); 
 
     return 0;
 }
