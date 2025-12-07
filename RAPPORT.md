@@ -106,7 +106,52 @@ La fonction `callback` est appelée pour chaque paquet capturé. Elle extrait le
 
 **Exercice 16 : Test avec un navigateur**
 
-En naviguant sur internet pendant que le sniffer tourne, on observe une grande quantité de paquets. Cela est dû au chargement des nombreuses ressources d'une page web moderne (images, CSS, scripts) qui génèrent chacune des requêtes HTTP distinctes (souvent sur la même connexion TCP "Keep-Alive").
+**Important**: Les navigateurs modernes utilisent HTTPS par défaut, qui est chiffré. Le sniffer ne peut analyser que le trafic HTTP non chiffré (port 80).
+
+**Test effectué**: Navigation vers `http://example.com` et pages inexistantes pour déclencher des erreurs 404.
+
+**Résultats de capture (Navigateur Web):**
+
+*Trafic Normal (HTTP 200 OK):*
+```
+[Packet] Dest IP: 10.16.37.152 | Size: 364 bytes
+--- Content (First 200+ bytes) ---
+HTTP/1.1 200 OK
+Server: nginx
+Content-Length: 90
+Via: 1.1 google
+Date: Sun, 07 Dec 2025 01:37:23 GMT
+Content-Type: text/html
+Cache-Control: public,must-revalidate,max-age=0,s-maxage=3600
+
+<meta http-equiv="refresh" content="0;url=https://support.mozilla.org/kb/captive-portal"/>
+--------------------------------
+```
+
+*Détection d'erreurs 404 (Navigation vers pages inexistantes):*
+```
+[Packet] Dest IP: 10.16.37.152 | Size: 970 bytes
+--- Content (First 200+ bytes) ---
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Content-Type: text/html
+ETag: "bc2473a18e003bdb249eba5ce893033f:1760028122.592274"
+Last-Modified: Thu, 09 Oct 2025 16:42:02 GMT
+Server: AkamaiNetStorage
+Content-Length: 513
+Expires: Sun, 07 Dec 2025 16:39:46 GMT
+Cache-Control: max-age=0, no-cache, no-store
+Pragma: no-cache
+Date: Sun, 07 Dec 2025 16:39:46 GMT
+Connection: keep-alive
+
+<!doctype html><html lang="en"><head><title>Example Domain</title>...
+--------------------------------
+[!] 404 Error Detected in Packet!
+ALARM: Suspicious behavior detected (Two 404 errors)!
+```
+
+**Observation**: En naviguant sur internet pendant que le sniffer tourne, on observe une grande quantité de paquets. Cela est dû au chargement des nombreuses ressources d'une page web moderne (images, CSS, scripts) qui génèrent chacune des requêtes HTTP distinctes (souvent sur la même connexion TCP "Keep-Alive"). Le système détecte correctement les erreurs 404 et déclenche l'alarme après deux détections.
 
 **Exercice 17 : Test avec Telnet**
 
@@ -118,39 +163,72 @@ J'ai intégré la logique `detectHttp404` dans la fonction `callback` du sniffer
 
 **Résultat de l'exécution (sniffer.c) :**
 
-*Trafic Normal (Capture réelle) :*
+**Configuration:**
 ```
-Content-Security-Policy-Report-Only: object-src 'none';base-uri 'self';script-src 'nonce-aQIgW4gIFus6C1aoCjzA3Q' 'strict-dynamic' 'report-sample' 'unsafe-eval' 'unsafe-inline' https: http:;report-uri https://csp.withgoogle.com/csp/gws/other-hp
-Server: gws
-Content-Length: 219
-X-XSS-Protection: 0
-X-Frame-Options: SAMEORIGIN
+Device found: eth0
+Net: 10.16.32.0
+Mask: 255.255.240.0
+Device eth0 opened.
+Filter 'tcp src port 80' applied.
+Starting capture loop...
+```
 
-<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
-<TITLE>301 Moved</TITLE></HEAD><BODY>
-<H1>301 Moved</H1>
-The document has moved
-<A HREF="http://www.google.com/">here</A>.
-</BODY></HTML>
+**Trafic Normal (Capture réelle via navigateur) :**
+```
+[Packet] Dest IP: 10.16.37.152 | Size: 364 bytes
+--- Content (First 200+ bytes) ---
+HTTP/1.1 200 OK
+Server: nginx
+Content-Length: 90
+Via: 1.1 google
+Date: Sun, 07 Dec 2025 01:37:23 GMT
+Content-Type: text/html
+Cache-Control: public,must-revalidate,max-age=0,s-maxage=3600
+
+<meta http-equiv="refresh" content="0;url=https://support.mozilla.org/kb/captive-portal"/>
+--------------------------------
+```
+
+**Détection d'Intrusion (Test via navigateur - http://example.com/fakepage) :**
+```
+[Packet] Dest IP: 10.16.37.152 | Size: 970 bytes
+--- Content (First 200+ bytes) ---
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Content-Type: text/html
+ETag: "bc2473a18e003bdb249eba5ce893033f:1760028122.592274"
+Last-Modified: Thu, 09 Oct 2025 16:42:02 GMT
+Server: AkamaiNetStorage
+Content-Length: 513
+Expires: Sun, 07 Dec 2025 16:37:40 GMT
+Cache-Control: max-age=0, no-cache, no-store
+Pragma: no-cache
+Date: Sun, 07 Dec 2025 16:37:40 GMT
+Connection: keep-alive
+
+<!doctype html><html lang="en"><head><title>Example Domain</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{background:#eee;width:60vw;margin:15vh auto;font-family:system-ui,sans-serif}h1{font-size:1.5em}div{opacity:0.8}a:link,a:visited{color:#348}</style><body><div><h1>Example Domain</h1><p>This domain is for use in documentation examples without needing permission. Avoid use in operations.<p><a href="https://iana.org/domains/example">Learn more</a></div></body></html>
 
 --------------------------------
-[Packet] Dest IP: 172.17.0.2 | Size: 66 bytes
-```
-
-*Détection d'Intrusion (Simulation de l'alarme) :*
-```
-[Packet] Dest IP: 172.17.0.2 | Size: 412 bytes
---- Content (First 200+ bytes) ---
-HTTP/1.1 404 Not Found
-Content-Type: text/html; charset=UTF-8
-...
 [!] 404 Error Detected in Packet!
 
-[Packet] Dest IP: 172.17.0.2 | Size: 412 bytes
+[Packet] Dest IP: 10.16.37.152 | Size: 970 bytes
 --- Content (First 200+ bytes) ---
 HTTP/1.1 404 Not Found
-Content-Type: text/html; charset=UTF-8
-...
+Accept-Ranges: bytes
+Content-Type: text/html
+ETag: "bc2473a18e003bdb249eba5ce893033f:1760028122.592274"
+Last-Modified: Thu, 09 Oct 2025 16:42:02 GMT
+Server: AkamaiNetStorage
+Content-Length: 513
+Expires: Sun, 07 Dec 2025 16:39:46 GMT
+Cache-Control: max-age=0, no-cache, no-store
+Pragma: no-cache
+Date: Sun, 07 Dec 2025 16:39:46 GMT
+Connection: keep-alive
+
+<!doctype html><html lang="en"><head><title>Example Domain</title>...
+
+--------------------------------
 [!] 404 Error Detected in Packet!
 ALARM: Suspicious behavior detected (Two 404 errors)!
 ```
